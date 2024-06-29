@@ -1,5 +1,7 @@
 const Campground = require('../models/campground');
 const { cloudinary } = require("../cloudinary");
+const maptilerClient = require("@maptiler/client");
+maptilerClient.config.apiKey = process.env.MAPTILER_API_KEY;
 
 module.exports.index = async (req, res) => {
     const campgrounds = await Campground.find({});
@@ -12,8 +14,11 @@ module.exports.newCampground = (req, res) => {
 
 module.exports.createCampground = async (req, res, next) => {
     // if (!req.body.campground) throw new ExpressError('Invalid Campground Data', 400);
+    //getting the geoJSON data from maptiler using location name
+    const geoData = await maptilerClient.geocoding.forward(req.body.campground.location, { limit: 1 });
     const campground = new Campground(req.body.campground);
-    campground.images = req.files.map(f => ({ url : f.path , filename : f.filename })); 
+    campground.geometry = geoData.features[0].geometry;
+    campground.images = req.files.map(f => ({ url: f.path, filename: f.filename }));
     campground.author = req.user._id;
     await campground.save();
     req.flash('success', 'Successfully made a new campground!');
@@ -22,9 +27,9 @@ module.exports.createCampground = async (req, res, next) => {
 
 module.exports.searchCampground = async (req, res,) => {
     const campground = await Campground.findById(req.params.id).populate({
-        path:'reviews' ,
-        populate : {
-            path : 'author'
+        path: 'reviews',
+        populate: {
+            path: 'author'
         }
     }).populate('author');
     if (!campground) {
@@ -48,7 +53,9 @@ module.exports.updateCampground = async (req, res) => {
     const { id } = req.params;
     // console.log(req.body);
     const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
-    const imgs = req.files.map(f => ({ url : f.path , filename : f.filename })); 
+    const geoData = await maptilerClient.geocoding.forward(req.body.campground.location, { limit: 1 });
+    campground.geometry = geoData.features[0].geometry;
+    const imgs = req.files.map(f => ({ url: f.path, filename: f.filename }));
     campground.images.push(...imgs);
     await campground.save();
     if (req.body.deleteImages) {
