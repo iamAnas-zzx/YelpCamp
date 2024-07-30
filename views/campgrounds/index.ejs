@@ -9,9 +9,9 @@
             <div class="row">
                 <div class="col-md-4">
                     <% if(campground.images.length) { %>
-                        <img class="img-fluid" alt="" src="<%=campground.images[0].url%>">
+                        <img crossorigin="anonymous"  class="img-fluid" alt="" src="<%=campground.images[0].url%>">
                         <% } else { %>
-                            <img class="img-fluid" alt=""
+                            <img crossorigin="anonymous" class="img-fluid" alt=""
                                 src="https://res.cloudinary.com/dhmmuol3x/image/upload/v1719499790/YelpCamp/ueri83ej4fsbknsvvz1g.jpg">
                             <% } %>
                 </div>
