@@ -5,6 +5,9 @@ if(process.env.NODE_ENV !== 'production'){
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
+//just a version issue fix
+mongoose.set('strictQuery', false);
+
 const ejsMate = require('ejs-mate');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -15,21 +18,23 @@ const LocalStrategy = require('passport-local');
 const User = require('./models/user');
 const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
+const MongoStore = require('connect-mongo');
 
 const userRoutes = require('./routes/users');
 const campgrounds = require('./routes/campgrounds');
 const reviews = require('./routes/reviews');
-const { name } = require('ejs');
 const DB_NAME = process.env.DB_NAME;
 const mongodbURI = process.env.MONGODB_URI
+const secret = process.env.SECRET || 'thisshouldbeabettersecret!'
 
 // console.log(mongodbURI+DB_NAME)
-// mongodb://localhost:27017/yelp-camp
-mongoose.connect(mongodbURI+DB_NAME, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false
+const dbUrl =  'mongodb://localhost:27017/yelp-camp';
+
+mongoose.connect(dbUrl , {
+    // useNewUrlParser: true,
+    // useCreateIndex: true,
+    // useUnifiedTopology: true,
+    // useFindAndModify: false
 });
 
 const db = mongoose.connection;
@@ -49,9 +54,22 @@ app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(mongoSanitize());
 
+const store = MongoStore.create({
+    mongoUrl: dbUrl,
+    touchAfter: 24 * 60 * 60,
+    crypto: {
+        secret: secret
+    }
+});
+
+store.on("error", function (e) {
+    console.log("SESSION STORE ERROR", e)
+})
+
 const sessionConfig = {
+    store,
     name: 'session',
-    secret: 'thisshouldbeabettersecret!',
+    secret,
     resave: false,
     saveUninitialized: true,
     cookie: {
@@ -97,7 +115,7 @@ app.use(
                 "'self'",
                 "blob:",
                 "data:",
-                "https://res.cloudinary.com/dhmmuol3x/", //SHOULD MATCH YOUR CLOUDINARY ACCOUNT! 
+                "https://res.cloudinary.com/dhmmuol3x/",  
                 "https://images.unsplash.com/",
                 "https://api.maptiler.com/"
             ],
